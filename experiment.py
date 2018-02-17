@@ -3,6 +3,9 @@ import cv2
 import argparse
 import glob
 import dlib
+import math
+from time import time as timer
+import sys
 
 
 # Get a reference to webcam #0 (the default one)
@@ -11,6 +14,9 @@ objects_svm = []
 detectors = []
 display_list = []
 show_list = []
+elapsed = int()
+start = timer()
+
 
 
 for files in glob.glob("./svmfiles/*.svm"):
@@ -82,8 +88,13 @@ class ObjectDetector(object):
         preds = self.predict(image)
         
         for (x,y,xb,yb) in preds:
+            distancei = (2*3.14 * 180)/((xb-x)+(yb-y)*360)*1000 + 9
+            distance = math.floor(distancei/2)
+
             #draw and annotate on image
             cv2.rectangle(image,(x,y),(xb,yb),(0,0,255),2)
+            cv2.putText(frame,'Distance = ' + str(distance) + ' Inch', (x+40,y-40),cv2.FONT_HERSHEY_SIMPLEX,1.0,(128,255,0),2)
+
             if annotate is not None and type(annotate)==str:
                 cv2.putText(image,annotate,(x+5,y-5),cv2.FONT_HERSHEY_SIMPLEX,1.0,(128,255,0),2)
 
@@ -91,9 +102,15 @@ class ObjectDetector(object):
 while True:
     # Grab a single frame of video
     ret, frame = video_capture.read()
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+
     #image = video_capture.read()[1]
-    results = dlib.fhog_object_detector.run_multiple(detectors, frame, upsample_num_times=0, adjust_threshold=0.0)
+    results = dlib.fhog_object_detector.run_multiple(detectors, small_frame, upsample_num_times=0, adjust_threshold=0.0)
     #detector = ObjectDetector(loadPath = objects_svm[int(results[2][0])])
+    elapsed += 1;
+    cv2.putText(frame,('{0:3.3f} FPS'.format(elapsed / (timer() - start))), (1000, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,69,0), 2)
+
+    
 
 
 
@@ -116,11 +133,12 @@ while True:
 
         for item in display_list:
             variability +=45
-            cv2.putText(frame, item, (50, 0 + variability), item_font, 1.0, (255, 255, 255), 2)
+            cv2.putText(frame, item, (20, 0 + variability), item_font, 1.0, (255, 255, 255), 2)
             annotationstring = "./indicator/"+ item + ".jpg"
             if annotationstring in show_list:
                 curr_image = cv2.imread(annotationstring)
                 cv2.imshow('Video', curr_image)
+                cv2.imwrite("output.jpg", curr_image)
 
         opacity = 0.7
         cv2.addWeighted(overlay,opacity,frame,opacity,0,frame)
@@ -133,6 +151,13 @@ while True:
 
         # Display the resulting image
     cv2.imshow('Video', imS)
+    cv2.imwrite("output.jpg", imS)
+
+    if elapsed % 5 == 0:
+        sys.stdout.write('\r')
+        sys.stdout.write('{0:3.3f} FPS'.format(elapsed / (timer() - start)))
+        sys.stdout.flush()
+
         
     # Hit 'q' on the keyboard to quit!
     if cv2.waitKey(1) & 0xFF == ord('q'):

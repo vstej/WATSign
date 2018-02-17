@@ -10,7 +10,9 @@ args = vars(ap.parse_args())
 
 print ('[INFO] loading annotations and images')
 annots = np.load(args["annotations"])
+print ("Annotations:" + str(len(annots)))
 imagePaths = np.load(args["images"])
+print ("Images:" + str(len(imagePaths)))
 
 detector = ObjectDetector()
 print ('[INFO] creating & saving object detector')
